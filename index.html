@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>INVENTARIO EDF</title>
-    <script src=></script>
+    <script src=""></script>
 </head>
 <body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen py-8 px-4">
     <div id="app" class="max-w-2xl mx-auto"></div>
@@ -98,28 +98,48 @@
             }
         }
 
-        // Validar código ingresado
-        function validarCodigo(codigoIngresado) {
-            estado.codigoIngresado = codigoIngresado.trim().toUpperCase();
+        // Actualizar código mientras escribe (sin validar)
+        function actualizarCodigoIngresado(valor) {
+            estado.codigoIngresado = valor.toUpperCase();
+            renderizar();
+        }
+
+        // Validar código al presionar Enter
+        function validarCodigo() {
             estado.error = '';
+            
+            if (estado.codigoIngresado.trim() === '') {
+                estado.error = 'Por favor ingresa un código';
+                estado.codigoSeleccionado = '';
+                estado.clienteSeleccionado = '';
+                renderizar();
+                return;
+            }
             
             // Buscar el código en la lista
             const codigoEncontrado = estado.codigos.find(
-                c => c.codigo.toUpperCase() === estado.codigoIngresado
+                c => c.codigo.toUpperCase() === estado.codigoIngresado.trim()
             );
             
             if (codigoEncontrado) {
                 estado.codigoSeleccionado = codigoEncontrado.codigo;
                 estado.clienteSeleccionado = codigoEncontrado.cliente;
+                estado.error = '';
             } else {
                 estado.codigoSeleccionado = '';
                 estado.clienteSeleccionado = '';
-                if (estado.codigoIngresado !== '') {
-                    estado.error = 'Código no encontrado en la base de datos';
-                }
+                estado.error = 'Código no encontrado en la base de datos';
             }
             
             renderizar();
+        }
+
+        // Manejar tecla Enter
+        function manejarTeclaEnter(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                validarCodigo();
+            }
         }
 
         // Avanzar a formulario
@@ -274,19 +294,22 @@
                                 <input 
                                     type="text" 
                                     value="${estado.codigoIngresado}"
-                                    oninput="validarCodigo(this.value)"
+                                    oninput="actualizarCodigoIngresado(this.value)"
+                                    onkeypress="manejarTeclaEnter(event)"
                                     placeholder="Ejemplo: ABC123"
                                     class="w-full px-4 py-3 border-2 ${estado.codigoSeleccionado ? 'border-green-400 bg-green-50' : estado.error ? 'border-red-400' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-lg uppercase"
                                     autocomplete="off">
-                                <p class="mt-2 text-sm text-gray-500">Escribe el código y se validará automáticamente</p>
+                                <p class="mt-2 text-sm text-gray-500">
+                                    <strong>Presiona ENTER</strong> para validar el código
+                                </p>
                             </div>
 
                             ${estado.error ? `
-                                <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 flex items-center">
-                                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <div class="bg-red-50 border-2 border-red-400 text-red-700 px-4 py-3 rounded-lg mb-4 flex items-center">
+                                    <svg class="w-5 h-5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                         <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
                                     </svg>
-                                    ${estado.error}
+                                    <span>${estado.error}</span>
                                 </div>
                             ` : ''}
 
