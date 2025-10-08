@@ -3,26 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Formulario de Satisfacción</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>INVENTARIO EDF</title>
+    <script src=></script>
 </head>
 <body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen py-8 px-4">
     <div id="app" class="max-w-2xl mx-auto"></div>
 
     <script>
         // ⚠️ REEMPLAZA ESTA URL CON TU URL DE GOOGLE APPS SCRIPT
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyDoFIXzYgU5Y_4iBCbeiaEzzcgZKfYrw5c2zyJ4tk_MioaDa5-wph3H2jeMgjat-O-/exec';
+        const SCRIPT_URL = 'https://script.google.com/macros/s/TU_ID_AQUI/exec';
 
         let estado = {
             paso: 1,
             codigos: [],
             preguntas: [],
+            codigoIngresado: '',
             codigoSeleccionado: '',
             clienteSeleccionado: '',
             respuestas: {},
             geolocalizacion: null,
             cargando: false,
-            error: ''
+            error: '',
+            validandoCodigo: false
         };
 
         // Inicializar aplicación
@@ -96,18 +98,34 @@
             }
         }
 
-        // Seleccionar código
-        function seleccionarCodigo(codigo) {
-            estado.codigoSeleccionado = codigo;
-            const cliente = estado.codigos.find(c => c.codigo === codigo);
-            estado.clienteSeleccionado = cliente ? cliente.cliente : '';
+        // Validar código ingresado
+        function validarCodigo(codigoIngresado) {
+            estado.codigoIngresado = codigoIngresado.trim().toUpperCase();
+            estado.error = '';
+            
+            // Buscar el código en la lista
+            const codigoEncontrado = estado.codigos.find(
+                c => c.codigo.toUpperCase() === estado.codigoIngresado
+            );
+            
+            if (codigoEncontrado) {
+                estado.codigoSeleccionado = codigoEncontrado.codigo;
+                estado.clienteSeleccionado = codigoEncontrado.cliente;
+            } else {
+                estado.codigoSeleccionado = '';
+                estado.clienteSeleccionado = '';
+                if (estado.codigoIngresado !== '') {
+                    estado.error = 'Código no encontrado en la base de datos';
+                }
+            }
+            
             renderizar();
         }
 
         // Avanzar a formulario
         async function avanzarAFormulario() {
             if (!estado.codigoSeleccionado) {
-                estado.error = 'Por favor selecciona un código';
+                estado.error = 'Por favor ingresa un código válido';
                 renderizar();
                 return;
             }
@@ -168,12 +186,14 @@
                 paso: 1,
                 codigos: estado.codigos,
                 preguntas: [],
+                codigoIngresado: '',
                 codigoSeleccionado: '',
                 clienteSeleccionado: '',
                 respuestas: {},
                 geolocalizacion: estado.geolocalizacion,
                 cargando: false,
-                error: ''
+                error: '',
+                validandoCodigo: false
             };
             renderizar();
         }
@@ -246,39 +266,51 @@
                             </div>
                         ` : ''}
 
-                        ${estado.error ? `
-                            <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
-                                ${estado.error}
-                            </div>
-                        ` : ''}
-
                         ${!estado.cargando && estado.codigos.length > 0 ? `
                             <div class="mb-6">
                                 <label class="block text-gray-700 font-semibold mb-2">
-                                    Selecciona tu código:
+                                    Ingresa tu código:
                                 </label>
-                                <select onchange="seleccionarCodigo(this.value)"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                                    <option value="">-- Selecciona un código --</option>
-                                    ${estado.codigos.map(c => `
-                                        <option value="${c.codigo}" ${estado.codigoSeleccionado === c.codigo ? 'selected' : ''}>
-                                            ${c.codigo} - ${c.cliente}
-                                        </option>
-                                    `).join('')}
-                                </select>
+                                <input 
+                                    type="text" 
+                                    value="${estado.codigoIngresado}"
+                                    oninput="validarCodigo(this.value)"
+                                    placeholder="Ejemplo: ABC123"
+                                    class="w-full px-4 py-3 border-2 ${estado.codigoSeleccionado ? 'border-green-400 bg-green-50' : estado.error ? 'border-red-400' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-lg uppercase"
+                                    autocomplete="off">
+                                <p class="mt-2 text-sm text-gray-500">Escribe el código y se validará automáticamente</p>
                             </div>
 
+                            ${estado.error ? `
+                                <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 flex items-center">
+                                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                                    </svg>
+                                    ${estado.error}
+                                </div>
+                            ` : ''}
+
                             ${estado.clienteSeleccionado ? `
-                                <div class="bg-blue-50 border border-blue-200 p-4 rounded-lg mb-6">
-                                    <p class="text-blue-800">
-                                        <strong>Cliente:</strong> ${estado.clienteSeleccionado}
-                                    </p>
+                                <div class="bg-green-50 border-2 border-green-400 p-4 rounded-lg mb-6 flex items-center">
+                                    <svg class="w-6 h-6 text-green-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    <div>
+                                        <p class="text-green-800 font-semibold">✓ Código válido</p>
+                                        <p class="text-green-700">
+                                            <strong>Cliente:</strong> ${estado.clienteSeleccionado}
+                                        </p>
+                                    </div>
                                 </div>
                             ` : ''}
 
                             ${estado.geolocalizacion && !estado.geolocalizacion.error ? `
-                                <div class="bg-green-50 border border-green-200 p-4 rounded-lg mb-6">
-                                    <p class="text-green-800 text-sm">
+                                <div class="bg-blue-50 border border-blue-200 p-4 rounded-lg mb-6 flex items-center">
+                                    <svg class="w-5 h-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                    </svg>
+                                    <p class="text-blue-800 text-sm">
                                         ✓ Ubicación capturada correctamente
                                     </p>
                                 </div>
