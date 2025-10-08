@@ -139,7 +139,20 @@
             if (event.key === 'Enter') {
                 event.preventDefault();
                 validarCodigo();
+                // Mantener el foco en el campo
+                setTimeout(() => {
+                    const input = document.getElementById('codigoInput');
+                    if (input) input.focus();
+                }, 100);
             }
+        }
+
+        // Asegurar que el input tenga foco al cargar
+        function enfocarInput() {
+            setTimeout(() => {
+                const input = document.getElementById('codigoInput');
+                if (input) input.focus();
+            }, 100);
         }
 
         // Avanzar a formulario
@@ -277,7 +290,7 @@
             if (estado.paso === 1) {
                 html = `
                     <div class="bg-white rounded-xl shadow-lg p-8">
-                        <h1 class="text-3xl font-bold text-gray-800 mb-6">Formulario de Satisfacción</h1>
+                        <h1 class="text-3xl font-bold text-gray-800 mb-6">INVENTARIO EDF</h1>
                         
                         ${estado.cargando ? `
                             <div class="text-center py-4">
@@ -287,20 +300,22 @@
                         ` : ''}
 
                         ${!estado.cargando && estado.codigos.length > 0 ? `
-                            <div class="mb-6">
+                            <div class="mb-4">
                                 <label class="block text-gray-700 font-semibold mb-2">
                                     Ingresa tu código:
                                 </label>
                                 <input 
+                                    id="codigoInput"
                                     type="text" 
                                     value="${estado.codigoIngresado}"
                                     oninput="actualizarCodigoIngresado(this.value)"
                                     onkeypress="manejarTeclaEnter(event)"
-                                    placeholder="Ejemplo: ABC123"
+                                    placeholder="Ejemplo: C000012345"
                                     class="w-full px-4 py-3 border-2 ${estado.codigoSeleccionado ? 'border-green-400 bg-green-50' : estado.error ? 'border-red-400' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-lg uppercase"
-                                    autocomplete="off">
-                                <p class="mt-2 text-sm text-gray-500">
-                                    <strong>Presiona ENTER</strong> para validar el código
+                                    autocomplete="off"
+                                    autofocus>
+                                <p class="mt-1 text-xs text-gray-500">
+                                    Presiona <kbd class="px-1.5 py-0.5 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded">ENTER</kbd> para validar
                                 </p>
                             </div>
 
