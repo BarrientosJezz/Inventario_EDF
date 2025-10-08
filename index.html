@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formulario de Satisfacción</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen py-8 px-4">
+    <div id="app" class="max-w-2xl mx-auto"></div>
+
+    <script>
+        // ⚠️ REEMPLAZA ESTA URL CON TU URL DE GOOGLE APPS SCRIPT
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyDoFIXzYgU5Y_4iBCbeiaEzzcgZKfYrw5c2zyJ4tk_MioaDa5-wph3H2jeMgjat-O-/exec';
+
+        let estado = {
+            paso: 1,
+            codigos: [],
+            preguntas: [],
+            codigoSeleccionado: '',
+            clienteSeleccionado: '',
+            respuestas: {},
+            geolocalizacion: null,
+            cargando: false,
+            error: ''
+        };
+
+        // Inicializar aplicación
+        async function iniciar() {
+            await cargarCodigos();
+            obtenerGeolocalizacion();
+            renderizar();
+        }
+
+        // Cargar códigos
+        async function cargarCodigos() {
+            try {
+                estado.cargando = true;
+                renderizar();
+                
+                const response = await fetch(`${SCRIPT_URL}?action=getCodigos`);
+                const data = await response.json();
+                
+                if (data.error) {
+                    estado.error = 'Error al cargar códigos: ' + data.error;
+                } else {
+                    estado.codigos = data;
+                }
+            } catch (err) {
+                estado.error = 'Error de conexión: ' + err.message;
+            } finally {
+                estado.cargando = false;
+                renderizar();
+            }
+        }
+
+        // Cargar preguntas
+        async function cargarPreguntas() {
+            try {
+                estado.cargando = true;
+                renderizar();
+                
+                const response = await fetch(`${SCRIPT_URL}?action=getPreguntas`);
+                const data = await response.json();
+                
+                if (data.error) {
+                    estado.error = 'Error al cargar preguntas: ' + data.error;
+                } else {
+                    estado.preguntas = data;
+                }
+            } catch (err) {
+                estado.error = 'Error de conexión: ' + err.message;
+            } finally {
+                estado.cargando = false;
+                renderizar();
+            }
+        }
+
+        // Obtener geolocalización
+        function obtenerGeolocalizacion() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        estado.geolocalizacion = {
+                            latitud: position.coords.latitude,
+                            longitud: position.coords.longitude,
+                            precision: position.coords.accuracy
+                        };
+                        renderizar();
+                    },
+                    (error) => {
+                        estado.geolocalizacion = { error: error.message };
+                        renderizar();
+                    }
+                );
+            }
+        }
+
+        // Seleccionar código
+        function seleccionarCodigo(codigo) {
+            estado.codigoSeleccionado = codigo;
+            const cliente = estado.codigos.find(c => c.codigo === codigo);
+            estado.clienteSeleccionado = cliente ? cliente.cliente : '';
+            renderizar();
+        }
+
+        // Avanzar a formulario
+        async function avanzarAFormulario() {
+            if (!estado.codigoSeleccionado) {
+                estado.error = 'Por favor selecciona un código';
+                renderizar();
+                return;
+            }
+            estado.error = '';
+            estado.paso = 2;
+            await cargarPreguntas();
+        }
+
+        // Actualizar respuesta
+        function actualizarRespuesta(preguntaId, valor) {
+            estado.respuestas[preguntaId] = valor;
+        }
+
+        // Enviar formulario
+        async function enviarFormulario() {
+            const preguntasSinResponder = estado.preguntas.filter(p => !estado.respuestas[p.id]);
+            if (preguntasSinResponder.length > 0) {
+                estado.error = 'Por favor responde todas las preguntas';
+                renderizar();
+                return;
+            }
+
+            estado.cargando = true;
+            estado.error = '';
+            renderizar();
+
+            try {
+                const datos = {
+                    codigo: estado.codigoSeleccionado,
+                    cliente: estado.clienteSeleccionado,
+                    geolocalizacion: estado.geolocalizacion,
+                    respuestas: estado.respuestas
+                };
+
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(datos)
+                });
+
+                const resultado = await response.json();
+
+                if (resultado.success) {
+                    estado.paso = 3;
+                } else {
+                    estado.error = 'Error al enviar: ' + resultado.error;
+                }
+            } catch (err) {
+                estado.error = 'Error de conexión: ' + err.message;
+            } finally {
+                estado.cargando = false;
+                renderizar();
+            }
+        }
+
+        // Reiniciar formulario
+        function reiniciar() {
+            estado = {
+                paso: 1,
+                codigos: estado.codigos,
+                preguntas: [],
+                codigoSeleccionado: '',
+                clienteSeleccionado: '',
+                respuestas: {},
+                geolocalizacion: estado.geolocalizacion,
+                cargando: false,
+                error: ''
+            };
+            renderizar();
+        }
+
+        // Renderizar campo según tipo
+        function renderizarCampo(pregunta) {
+            const valor = estado.respuestas[pregunta.id] || '';
+
+            switch (pregunta.tipo) {
+                case 'text':
+                    return `<input type="text" value="${valor}" 
+                        onchange="actualizarRespuesta(${pregunta.id}, this.value)"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        placeholder="Escribe tu respuesta">`;
+
+                case 'textarea':
+                    return `<textarea 
+                        onchange="actualizarRespuesta(${pregunta.id}, this.value)"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        rows="4"
+                        placeholder="Escribe tu respuesta">${valor}</textarea>`;
+
+                case 'number':
+                    return `<input type="number" value="${valor}"
+                        onchange="actualizarRespuesta(${pregunta.id}, this.value)"
+                        min="${pregunta.min || 1}" max="${pregunta.max || 10}"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">`;
+
+                case 'select':
+                    return `<select onchange="actualizarRespuesta(${pregunta.id}, this.value)"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <option value="">Selecciona una opción</option>
+                        ${pregunta.opciones.map(op => 
+                            `<option value="${op}" ${valor === op ? 'selected' : ''}>${op}</option>`
+                        ).join('')}
+                    </select>`;
+
+                case 'radio':
+                    return `<div class="space-y-2">
+                        ${pregunta.opciones.map(op => `
+                            <label class="flex items-center space-x-2 cursor-pointer">
+                                <input type="radio" name="pregunta-${pregunta.id}" value="${op}"
+                                    ${valor === op ? 'checked' : ''}
+                                    onchange="actualizarRespuesta(${pregunta.id}, '${op}')"
+                                    class="w-4 h-4 text-blue-600">
+                                <span>${op}</span>
+                            </label>
+                        `).join('')}
+                    </div>`;
+
+                default:
+                    return `<p class="text-red-500">Tipo no soportado: ${pregunta.tipo}</p>`;
+            }
+        }
+
+        // Renderizar aplicación
+        function renderizar() {
+            const app = document.getElementById('app');
+            let html = '';
+
+            if (estado.paso === 1) {
+                html = `
+                    <div class="bg-white rounded-xl shadow-lg p-8">
+                        <h1 class="text-3xl font-bold text-gray-800 mb-6">Formulario de Satisfacción</h1>
+                        
+                        ${estado.cargando ? `
+                            <div class="text-center py-4">
+                                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+                                <p class="mt-4 text-gray-600">Cargando...</p>
+                            </div>
+                        ` : ''}
+
+                        ${estado.error ? `
+                            <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+                                ${estado.error}
+                            </div>
+                        ` : ''}
+
+                        ${!estado.cargando && estado.codigos.length > 0 ? `
+                            <div class="mb-6">
+                                <label class="block text-gray-700 font-semibold mb-2">
+                                    Selecciona tu código:
+                                </label>
+                                <select onchange="seleccionarCodigo(this.value)"
+                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                    <option value="">-- Selecciona un código --</option>
+                                    ${estado.codigos.map(c => `
+                                        <option value="${c.codigo}" ${estado.codigoSeleccionado === c.codigo ? 'selected' : ''}>
+                                            ${c.codigo} - ${c.cliente}
+                                        </option>
+                                    `).join('')}
+                                </select>
+                            </div>
+
+                            ${estado.clienteSeleccionado ? `
+                                <div class="bg-blue-50 border border-blue-200 p-4 rounded-lg mb-6">
+                                    <p class="text-blue-800">
+                                        <strong>Cliente:</strong> ${estado.clienteSeleccionado}
+                                    </p>
+                                </div>
+                            ` : ''}
+
+                            ${estado.geolocalizacion && !estado.geolocalizacion.error ? `
+                                <div class="bg-green-50 border border-green-200 p-4 rounded-lg mb-6">
+                                    <p class="text-green-800 text-sm">
+                                        ✓ Ubicación capturada correctamente
+                                    </p>
+                                </div>
+                            ` : ''}
+
+                            <button onclick="avanzarAFormulario()"
+                                ${!estado.codigoSeleccionado ? 'disabled' : ''}
+                                class="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition">
+                                Continuar al Formulario
+                            </button>
+                        ` : ''}
+                    </div>
+                `;
+            } else if (estado.paso === 2) {
+                html = `
+                    <div class="bg-white rounded-xl shadow-lg p-8">
+                        <h2 class="text-2xl font-bold text-gray-800 mb-6">
+                            Responde las siguientes preguntas
+                        </h2>
+
+                        ${estado.error ? `
+                            <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+                                ${estado.error}
+                            </div>
+                        ` : ''}
+
+                        ${estado.cargando ? `
+                            <div class="text-center py-4">
+                                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+                                <p class="mt-4 text-gray-600">Cargando preguntas...</p>
+                            </div>
+                        ` : ''}
+
+                        ${!estado.cargando && estado.preguntas.length > 0 ? `
+                            <div class="space-y-6">
+                                ${estado.preguntas.map(p => `
+                                    <div class="pb-6 border-b border-gray-200 last:border-b-0">
+                                        <label class="block text-gray-700 font-semibold mb-3">
+                                            ${p.id}. ${p.pregunta}
+                                        </label>
+                                        ${renderizarCampo(p)}
+                                    </div>
+                                `).join('')}
+
+                                <div class="flex gap-4 pt-4">
+                                    <button onclick="estado.paso = 1; renderizar()"
+                                        class="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-300 transition">
+                                        Volver
+                                    </button>
+                                    <button onclick="enviarFormulario()"
+                                        ${estado.cargando ? 'disabled' : ''}
+                                        class="flex-1 bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-300 transition">
+                                        ${estado.cargando ? 'Enviando...' : 'Enviar Respuestas'}
+                                    </button>
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            } else if (estado.paso === 3) {
+                html = `
+                    <div class="bg-white rounded-xl shadow-lg p-8 text-center">
+                        <div class="text-green-500 text-6xl mb-4">✓</div>
+                        <h2 class="text-2xl font-bold text-gray-800 mb-4">
+                            ¡Gracias por tu respuesta!
+                        </h2>
+                        <p class="text-gray-600 mb-6">
+                            Tu formulario ha sido enviado exitosamente.
+                        </p>
+                        <button onclick="reiniciar()"
+                            class="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition">
+                            Realizar otra encuesta
+                        </button>
+                    </div>
+                `;
+            }
+
+            app.innerHTML = html;
+        }
+
+        // Iniciar cuando cargue la página
+        window.onload = iniciar;
+    </script>
+</body>
+</html>
