@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>INVENTARIO EDF</title>
+    <title>Formulario de Satisfacción</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen py-8 px-4">
@@ -98,12 +98,6 @@
             }
         }
 
-        // Actualizar código mientras escribe (SIN renderizar para mantener el foco)
-        function actualizarCodigoIngresado(valor) {
-            estado.codigoIngresado = valor.toUpperCase();
-            // NO llamar a renderizar() aquí para mantener el foco en el input
-        }
-
         // Validar código al presionar Enter
         function validarCodigo() {
             estado.error = '';
@@ -116,7 +110,6 @@
                 return;
             }
             
-            // Buscar el código en la lista
             const codigoEncontrado = estado.codigos.find(
                 c => c.codigo.toUpperCase() === estado.codigoIngresado.trim()
             );
@@ -139,7 +132,6 @@
             if (event.key === 'Enter') {
                 event.preventDefault();
                 validarCodigo();
-                // Mantener el foco en el campo
                 setTimeout(() => {
                     const input = document.getElementById('codigoInput');
                     if (input) input.focus();
@@ -147,7 +139,7 @@
             }
         }
 
-        // Asegurar que el input tenga foco al cargar
+        // Enfocar input
         function enfocarInput() {
             setTimeout(() => {
                 const input = document.getElementById('codigoInput');
@@ -170,6 +162,43 @@
         // Actualizar respuesta
         function actualizarRespuesta(preguntaId, valor) {
             estado.respuestas[preguntaId] = valor;
+        }
+
+        // Manejar captura de foto
+        function capturarFoto(preguntaId, inputElement) {
+            const file = inputElement.files[0];
+            if (file) {
+                if (!file.type.startsWith('image/')) {
+                    alert('Por favor selecciona un archivo de imagen válido');
+                    inputElement.value = '';
+                    return;
+                }
+
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('La imagen es muy grande. Por favor selecciona una imagen menor a 5MB');
+                    inputElement.value = '';
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    estado.respuestas[preguntaId] = e.target.result;
+                    renderizar();
+                };
+                reader.onerror = function() {
+                    alert('Error al leer la imagen. Por favor intenta de nuevo.');
+                    inputElement.value = '';
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // Eliminar foto capturada
+        function eliminarFoto(preguntaId) {
+            delete estado.respuestas[preguntaId];
+            const input = document.getElementById(`input-foto-${preguntaId}`);
+            if (input) input.value = '';
+            renderizar();
         }
 
         // Enviar formulario
@@ -277,6 +306,43 @@
                         `).join('')}
                     </div>`;
 
+                case 'foto':
+                case 'image':
+                case 'camera':
+                    return `
+                        <div class="space-y-3">
+                            <input type="file" 
+                                id="input-foto-${pregunta.id}"
+                                accept="image/*" 
+                                capture="environment"
+                                onchange="capturarFoto(${pregunta.id}, this)"
+                                class="block w-full text-sm text-gray-500
+                                    file:mr-4 file:py-2 file:px-4
+                                    file:rounded-lg file:border-0
+                                    file:text-sm file:font-semibold
+                                    file:bg-blue-50 file:text-blue-700
+                                    hover:file:bg-blue-100 cursor-pointer">
+                            
+                            ${valor ? `
+                                <div class="relative inline-block">
+                                    <img id="preview-${pregunta.id}" 
+                                        src="${valor}" 
+                                        alt="Foto capturada"
+                                        class="max-w-full h-48 rounded-lg border-2 border-gray-300 shadow-sm">
+                                    <button type="button"
+                                        onclick="eliminarFoto(${pregunta.id})"
+                                        class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-7 h-7 flex items-center justify-center hover:bg-red-600 shadow-lg">
+                                        ✕
+                                    </button>
+                                </div>
+                            ` : `
+                                <img id="preview-${pregunta.id}" 
+                                    src="" 
+                                    alt="Vista previa"
+                                    class="hidden max-w-full h-48 rounded-lg border-2 border-gray-300 shadow-sm">
+                            `}
+                        </div>`;
+
                 default:
                     return `<p class="text-red-500">Tipo no soportado: ${pregunta.tipo}</p>`;
             }
@@ -290,7 +356,7 @@
             if (estado.paso === 1) {
                 html = `
                     <div class="bg-white rounded-xl shadow-lg p-8">
-                        <h1 class="text-3xl font-bold text-gray-800 mb-6">INVENTARIO EDF</h1>
+                        <h1 class="text-3xl font-bold text-gray-800 mb-6">Formulario de Satisfacción</h1>
                         
                         ${estado.cargando ? `
                             <div class="text-center py-4">
@@ -310,7 +376,7 @@
                                     value="${estado.codigoIngresado}"
                                     oninput="estado.codigoIngresado = this.value.toUpperCase(); this.value = this.value.toUpperCase();"
                                     onkeypress="manejarTeclaEnter(event)"
-                                    placeholder="Ejemplo: C0000XXXXX"
+                                    placeholder="Ejemplo: ABC123"
                                     class="w-full px-4 py-3 border-2 ${estado.codigoSeleccionado ? 'border-green-400 bg-green-50' : estado.error ? 'border-red-400' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-lg uppercase"
                                     autocomplete="off"
                                     autofocus>
@@ -424,7 +490,6 @@
 
             app.innerHTML = html;
             
-            // Enfocar el input después de renderizar (solo en paso 1)
             if (estado.paso === 1) {
                 enfocarInput();
             }
