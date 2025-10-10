@@ -79,40 +79,40 @@
         }
 
         // Obtener geolocalización actualizada (versión async/await)
-function obtenerGeolocalizacionActualizada() {
-    return new Promise((resolve) => {
-        if (!navigator.geolocation) {
-            estado.geolocalizacion = { error: 'Geolocalización no disponible' };
-            resolve();
-            return;
-        }
-
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                estado.geolocalizacion = {
-                    latitud: position.coords.latitude,
-                    longitud: position.coords.longitude,
-                    precision: position.coords.accuracy
-                };
-                console.log('✅ Ubicación actualizada:', estado.geolocalizacion);
-                resolve();
-            },
-            (error) => {
-                console.warn('⚠️ Error al actualizar ubicación:', error.message);
-                // Mantener la geo anterior si falla
-                if (!estado.geolocalizacion) {
-                    estado.geolocalizacion = { error: error.message };
+        function obtenerGeolocalizacionActualizada() {
+            return new Promise((resolve) => {
+                if (!navigator.geolocation) {
+                    estado.geolocalizacion = { error: 'Geolocalización no disponible' };
+                    resolve();
+                    return;
                 }
-                resolve();
-            },
-            {
-                enableHighAccuracy: true,
-                timeout: 10000,
-                maximumAge: 0
-            }
-        );
-    });
-}
+        
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        estado.geolocalizacion = {
+                            latitud: position.coords.latitude,
+                            longitud: position.coords.longitude,
+                            precision: position.coords.accuracy
+                        };
+                        console.log('✅ Ubicación actualizada:', estado.geolocalizacion);
+                        resolve();
+                    },
+                    (error) => {
+                        console.warn('⚠️ Error al actualizar ubicación:', error.message);
+                        // Mantener la geo anterior si falla
+                        if (!estado.geolocalizacion) {
+                            estado.geolocalizacion = { error: error.message };
+                        }
+                        resolve();
+                    },
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 10000,
+                        maximumAge: 0
+                    }
+                );
+            });
+        }
 
         // Validar código al presionar Enter
         function validarCodigo() {
