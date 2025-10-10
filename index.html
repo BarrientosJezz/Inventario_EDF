@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Formulario de Satisfacción</title>
+    <title>INVENTARIO EDF</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen py-8 px-4">
     <div id="app" class="max-w-2xl mx-auto"></div>
 
     <script>
-        // ⚠️ REEMPLAZA ESTA URL CON TU URL DE GOOGLE APPS SCRIPT
+        // URL DE GOOGLE APPS SCRIPT
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyDoFIXzYgU5Y_4iBCbeiaEzzcgZKfYrw5c2zyJ4tk_MioaDa5-wph3H2jeMgjat-O-/exec';
 
         let estado = {
@@ -427,7 +427,7 @@
             if (estado.paso === 1) {
                 html = `
                     <div class="bg-white rounded-xl shadow-lg p-8">
-                        <h1 class="text-3xl font-bold text-gray-800 mb-6">Formulario de Satisfacción</h1>
+                        <h1 class="text-3xl font-bold text-gray-800 mb-6">INVENTARIO EDF</h1>
                         
                         ${estado.cargando ? `
                             <div class="text-center py-4">
@@ -439,7 +439,7 @@
                         ${!estado.cargando && estado.codigos.length > 0 ? `
                             <div class="mb-4">
                                 <label class="block text-gray-700 font-semibold mb-2">
-                                    Ingresa tu código:
+                                    Ingresa el codigo del cliente:
                                 </label>
                                 <input 
                                     id="codigoInput"
@@ -447,7 +447,7 @@
                                     value="${estado.codigoIngresado}"
                                     oninput="estado.codigoIngresado = this.value.toUpperCase(); this.value = this.value.toUpperCase();"
                                     onkeypress="manejarTeclaEnter(event)"
-                                    placeholder="Ejemplo: ABC123"
+                                    placeholder="Ejemplo: C0000XXXXX"
                                     class="w-full px-4 py-3 border-2 ${estado.codigoSeleccionado ? 'border-green-400 bg-green-50' : estado.error ? 'border-red-400' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-lg uppercase"
                                     autocomplete="off"
                                     autofocus>
