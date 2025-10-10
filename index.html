@@ -78,15 +78,9 @@
             }
         }
 
-        // Obtener geolocalización actualizada (versión async/await)
-        function obtenerGeolocalizacionActualizada() {
-            return new Promise((resolve) => {
-                if (!navigator.geolocation) {
-                    estado.geolocalizacion = { error: 'Geolocalización no disponible' };
-                    resolve();
-                    return;
-                }
-        
+        // Obtener geolocalización inicial
+        function obtenerGeolocalizacion() {
+            if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
                     (position) => {
                         estado.geolocalizacion = {
@@ -94,7 +88,35 @@
                             longitud: position.coords.longitude,
                             precision: position.coords.accuracy
                         };
-                        console.log('✅ Ubicación actualizada:', estado.geolocalizacion);
+                        console.log('📍 Ubicación inicial capturada:', estado.geolocalizacion);
+                        renderizar();
+                    },
+                    (error) => {
+                        estado.geolocalizacion = { error: error.message };
+                        console.warn('⚠️ Error al obtener ubicación inicial:', error.message);
+                        renderizar();
+                    }
+                );
+            }
+        }
+
+        // 🆕 Obtener geolocalización actualizada (versión async/await)
+        function obtenerGeolocalizacionActualizada() {
+            return new Promise((resolve) => {
+                if (!navigator.geolocation) {
+                    estado.geolocalizacion = { error: 'Geolocalización no disponible' };
+                    resolve();
+                    return;
+                }
+
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        estado.geolocalizacion = {
+                            latitud: position.coords.latitude,
+                            longitud: position.coords.longitude,
+                            precision: position.coords.accuracy
+                        };
+                        console.log('✅ Ubicación actualizada al enviar:', estado.geolocalizacion);
                         resolve();
                     },
                     (error) => {
@@ -211,8 +233,12 @@
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, width, height);
                         
-                        // Comprimir con calidad ajustable (0.7 = 70% calidad)
-                        const comprimido = canvas.toDataURL('image/jpeg', 0.7);
+                        // Obtener calidad seleccionada
+                        const selectCalidad = document.getElementById(`calidad-${preguntaId}`);
+                        const calidad = selectCalidad ? parseFloat(selectCalidad.value) : 0.7;
+                        
+                        // Comprimir con calidad ajustable
+                        const comprimido = canvas.toDataURL('image/jpeg', calidad);
                         
                         // Verificar tamaño después de comprimir
                         const sizeInMB = (comprimido.length * 0.75) / (1024 * 1024);
@@ -272,7 +298,7 @@
             renderizar();
         }
 
-        // Enviar formulario
+        // 🔄 ENVIAR FORMULARIO CON GEOLOCALIZACIÓN ACTUALIZADA
         async function enviarFormulario() {
             const preguntasSinResponder = estado.preguntas.filter(p => !estado.respuestas[p.id]);
             if (preguntasSinResponder.length > 0) {
@@ -286,12 +312,18 @@
             renderizar();
 
             try {
+                // 🔄 CAPTURAR GEOLOCALIZACIÓN ACTUALIZADA ANTES DE ENVIAR
+                console.log('📍 Capturando ubicación actualizada al enviar...');
+                await obtenerGeolocalizacionActualizada();
+                
                 const datos = {
                     codigo: estado.codigoSeleccionado,
                     cliente: estado.clienteSeleccionado,
-                    geolocalizacion: estado.geolocalizacion,
+                    geolocalizacion: estado.geolocalizacion, // Ahora tiene la geo actualizada
                     respuestas: estado.respuestas
                 };
+
+                console.log('Enviando datos:', datos);
 
                 const response = await fetch(SCRIPT_URL, {
                     method: 'POST',
